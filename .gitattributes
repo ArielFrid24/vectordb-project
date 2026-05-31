@@ -1,0 +1,4 @@
+artifacts/*.pkl filter=lfs diff=lfs merge=lfs -text
+artifacts/*.npy filter=lfs diff=lfs merge=lfs -text
+artifacts/faiss.index filter=lfs diff=lfs merge=lfs -text
+artifacts/corpus_texts.json filter=lfs diff=lfs merge=lfs -text
