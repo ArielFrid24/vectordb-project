@@ -1,30 +1,28 @@
-# Section B — Retrieval pipeline
+# Section B — Retrieval Pipeline
 
 ## Setup
-
-```bash
-cd path/to/student
 pip install -r requirements.txt
-```
 
-Corpus lives at **`data/Wikipedia Entries/`** (included in the handout).
-
-## Build index (offline, not timed — your machine only)
-
-Run once locally to create `artifacts/`. **Submit these files** in your repo; staff do not rebuild the index at grading time.
-
-```bash
+## Build Index (offline, run once)
+cd SectionB
 python scripts/build_index.py
-```
 
-## Public self-test
-
-After building, verify a fresh run loads your submitted artifacts (no rebuild):
-
-```bash
+## Evaluate
 python scripts/eval_public.py
-```
 
-## Submit
+## Artifacts
+- artifacts/index_vectors.npy — MiniLM embeddings for all 27,074 pages (384-dim, float32)
+- artifacts/index_meta.json — page_id mapping and metadata
+- artifacts/corpus_texts.json — page texts used for cross-encoder reranking
 
-Public GitHub repo with this code, **required** `artifacts/`, and a concise README documenting artifact paths. See the assignment PDF for video and grading details.
+## Pipeline Description
+1. Chunk: single chunk per page (title + full content via entry_text)
+2. Embed: sentence-transformers/all-MiniLM-L6-v2 (L2-normalized, 384-dim)
+3. Index: FAISS IndexFlatIP built offline, loaded at query time
+4. Retrieve: FAISS top-15 candidates per query
+5. Rerank: cross-encoder/ms-marco-MiniLM-L-6-v2 reranks candidates
+6. Return: top-10 page_ids per query sorted by cross-encoder score
+
+## Results
+- Public NDCG@10: 0.2969
+- Query phase time: ~30s for 50 queries
