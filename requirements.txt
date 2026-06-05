@@ -1,4 +1,9 @@
-numpy>=1.24
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+torchvision
+torchaudio
+numpy>=1.24,<2.0.0
 sentence-transformers==2.2.0
-faiss-gpu>=1.7.4
+huggingface-hub==0.10.1
+faiss-gpu-cu12
 rank_bm25>=0.2.2
