@@ -21,6 +21,8 @@ _faiss_index = None
 _texts_map = None
 _bm25 = None
 _bm25_pids = None
+_bm25_title = None
+_bm25_title_pids = None
 _corpus_vectors = None
 _corpus_page_ids_arr = None
 
@@ -36,7 +38,8 @@ def _is_multi_answer_query(query: str) -> bool:
 
 
 def _load_artifacts(root: Path):
-    global _faiss_index, _texts_map, _bm25, _bm25_pids, _corpus_vectors, _corpus_page_ids_arr
+    global _faiss_index, _texts_map, _bm25, _bm25_pids
+    global _bm25_title, _bm25_title_pids, _corpus_vectors, _corpus_page_ids_arr
 
     if _faiss_index is None:
         _faiss_index = faiss.read_index(str(root / "faiss.index"))
@@ -47,6 +50,10 @@ def _load_artifacts(root: Path):
     if _bm25 is None:
         with open(root / "bm25.pkl", "rb") as f:
             _bm25, _bm25_pids = pickle.load(f)
+
+    if _bm25_title is None:
+        with open(root / "bm25_title.pkl", "rb") as f:
+            _bm25_title, _bm25_title_pids = pickle.load(f)
 
     if _corpus_vectors is None:
         _corpus_vectors = np.load(root / "index_vectors.npy")
@@ -81,6 +88,7 @@ def search_batch(
 
     BASE_FETCH_K = 15
     MULTI_FETCH_K = 30
+    TITLE_FETCH_K = 10
     CLUSTER_SIM_THRESH = 0.85
     CLUSTER_MAX_EXPAND = 4
 
@@ -97,6 +105,7 @@ def search_batch(
         seen = {}
         candidates_ordered = []
 
+        # FAISS dense retrieval
         for rank_idx in range(fetch_k):
             idx = faiss_indices_all[i][rank_idx]
             if idx < 0:
@@ -107,12 +116,21 @@ def search_batch(
                 seen[pid] = score
                 candidates_ordered.append(pid)
 
+        # BM25 full-text retrieval
         tokenized_query = query.lower().split()
         bm25_scores = _bm25.get_scores(tokenized_query)
         top_bm25_idx = np.argsort(bm25_scores)[::-1][:fetch_k]
-
         for idx in top_bm25_idx:
             pid = _bm25_pids[idx]
+            if pid not in seen:
+                seen[pid] = 0.0
+                candidates_ordered.append(pid)
+
+        # BM25 title-only retrieval
+        title_scores = _bm25_title.get_scores(tokenized_query)
+        top_title_idx = np.argsort(title_scores)[::-1][:TITLE_FETCH_K]
+        for idx in top_title_idx:
+            pid = _bm25_title_pids[idx]
             if pid not in seen:
                 seen[pid] = 0.0
                 candidates_ordered.append(pid)

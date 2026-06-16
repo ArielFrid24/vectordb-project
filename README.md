@@ -1,28 +1,40 @@
-# Section B â€” Retrieval Pipeline
+# Section B — Retrieval pipeline
+
+## Video presentation
+
+https://drive.google.com/file/d/1u40ATUBDfWVMbTgefIYu4yXnNkAqVZEa/view?usp=drive_link
 
 ## Setup
+
+```bash
 pip install -r requirements.txt
+```
 
-## Build Index (offline, run once)
-cd SectionB
+Corpus lives at **`data/Wikipedia Entries/`** (included in the handout).
+
+## Build index
+
+```bash
 python scripts/build_index.py
+```
 
-## Evaluate
-python scripts/eval_public.py
+This generates the following files under `artifacts/`:
 
-## Artifacts
-- artifacts/index_vectors.npy â€” MiniLM embeddings for all 27,074 pages (384-dim, float32)
-- artifacts/index_meta.json â€” page_id mapping and metadata
-- artifacts/corpus_texts.json â€” page texts used for cross-encoder reranking
+| File | Contents |
+|---|---|
+| `index_vectors.npy` | Page embeddings, shape (27074, 384), MiniLM-L6-v2 |
+| `index_meta.json` | `page_ids` list and chunk metadata |
+| `faiss.index` | FAISS `IndexFlatIP` index for dense retrieval |
+| `corpus_texts.json` | Title + up to 600 words of content per page, used for cross-encoder reranking |
+| `bm25.pkl` | Serialized BM25Okapi model (full page text) + sorted page ID list |
+| `bm25_title.pkl` | Serialized BM25Okapi model (titles only) + sorted page ID list |
 
-## Pipeline Description
-1. Chunk: single chunk per page (title + full content via entry_text)
-2. Embed: sentence-transformers/all-MiniLM-L6-v2 (L2-normalized, 384-dim)
-3. Index: FAISS IndexFlatIP built offline, loaded at query time
-4. Retrieve: FAISS top-15 candidates per query
-5. Rerank: cross-encoder/ms-marco-MiniLM-L-6-v2 reranks candidates
-6. Return: top-10 page_ids per query sorted by cross-encoder score
+## Pipeline overview
 
-## Results
-- Public NDCG@10: 0.2969
-- Query phase time: ~30s for 50 queries
+`run(queries)` in `main.py` calls `search_batch()` in `retrieve.py`, which performs:
+
+1. **Embed** all queries in one batch using `all-MiniLM-L6-v2`.
+2. **FAISS dense retrieval** — top-15 candidates per query.
+3. **BM25 sparse retrieval** — top-15 candidates per query, unioned with FAISS results.
+4. **Cluster expansion** — for each candidate, add corpus neighbors with cosine similarity ? 0.85, up to 4 per candidate.
+5. **Cross-encoder reranking** — `cross-encoder/ms-marco-MiniLM-L-6-v2` scores all (query, candidate) pairs; final ranking blends normalized cross-encoder and FAISS scores (70/30 for factual queries, 40/60 for detected multi-answer queries).

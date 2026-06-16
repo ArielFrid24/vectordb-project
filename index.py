@@ -41,13 +41,13 @@ def build_index(
         json.dumps(meta, indent=2), encoding="utf-8"
     )
 
-    # save FAISS index to disk
+    # save FAISS index
     dim = vectors.shape[1]
     faiss_index = faiss.IndexFlatIP(dim)
     faiss_index.add(vectors)
     faiss.write_index(faiss_index, str(out_dir / "faiss.index"))
 
-    # save corpus texts for cross-encoder reranking
+    # corpus texts for cross-encoder reranking
     records_map = {int(r["page_id"]): r for r in records}
     texts_map = {}
     for pid in set(page_ids):
@@ -55,21 +55,31 @@ def build_index(
         title = r.get("title", "")
         content = r.get("content", "")
         words = content.split()
-        full_text = f"{title}\n\n{' '.join(words[:400])}" if title else " ".join(words[:400])
+        if title:
+            full_text = f"{title}\n\n{' '.join(words[:600])}"
+        else:
+            full_text = " ".join(words[:600])
         texts_map[str(pid)] = full_text
     (out_dir / "corpus_texts.json").write_text(
         json.dumps(texts_map), encoding="utf-8"
     )
 
-    # build BM25 on page level (one doc per page)
+    # BM25 on full page text
     page_texts = {}
     for chunk, text in zip(chunks, texts):
-        page_texts[chunk.page_id] = text
+        if chunk.page_id not in page_texts:
+            page_texts[chunk.page_id] = text
     sorted_pids = sorted(page_texts.keys())
     bm25_corpus = [page_texts[pid].lower().split() for pid in sorted_pids]
     bm25 = BM25Okapi(bm25_corpus)
     with open(out_dir / "bm25.pkl", "wb") as f:
         pickle.dump((bm25, sorted_pids), f)
+
+    # BM25 on titles only
+    title_corpus = [records_map[pid].get("title", "").lower().split() for pid in sorted_pids]
+    bm25_title = BM25Okapi(title_corpus)
+    with open(out_dir / "bm25_title.pkl", "wb") as f:
+        pickle.dump((bm25_title, sorted_pids), f)
 
     return vectors, page_ids
 
