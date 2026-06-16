@@ -1,4 +1,4 @@
-# Section B — Retrieval pipeline
+# Section B â€” Retrieval pipeline
 
 ## Video presentation
 
@@ -7,6 +7,8 @@ https://drive.google.com/file/d/1u40ATUBDfWVMbTgefIYu4yXnNkAqVZEa/view?usp=drive
 ## Setup
 
 ```bash
+git clone https://github.com/ArielFrid24/vectordb-project.git 
+cd vectordb-project/
 pip install -r requirements.txt
 ```
 
@@ -34,7 +36,7 @@ This generates the following files under `artifacts/`:
 `run(queries)` in `main.py` calls `search_batch()` in `retrieve.py`, which performs:
 
 1. **Embed** all queries in one batch using `all-MiniLM-L6-v2`.
-2. **FAISS dense retrieval** — top-15 candidates per query.
-3. **BM25 sparse retrieval** — top-15 candidates per query, unioned with FAISS results.
-4. **Cluster expansion** — for each candidate, add corpus neighbors with cosine similarity ? 0.85, up to 4 per candidate.
-5. **Cross-encoder reranking** — `cross-encoder/ms-marco-MiniLM-L-6-v2` scores all (query, candidate) pairs; final ranking blends normalized cross-encoder and FAISS scores (70/30 for factual queries, 40/60 for detected multi-answer queries).
+2. **FAISS dense retrieval** â€” top-15 candidates per query.
+3. **BM25 sparse retrieval** â€” top-15 candidates per query, unioned with FAISS results.
+4. **Cluster expansion** â€” for each candidate, add corpus neighbors with cosine similarity ? 0.85, up to 4 per candidate.
+5. **Cross-encoder reranking** â€” `cross-encoder/ms-marco-MiniLM-L-6-v2` scores all (query, candidate) pairs; final ranking blends normalized cross-encoder and FAISS scores (70/30 for factual queries, 40/60 for detected multi-answer queries).
