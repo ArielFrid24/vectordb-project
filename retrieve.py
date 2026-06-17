@@ -9,7 +9,6 @@ from typing import List, Optional
 
 import faiss
 import numpy as np
-import torch
 from sentence_transformers import CrossEncoder
 
 from embed import embed_queries
@@ -64,8 +63,7 @@ def _load_artifacts(root: Path):
 def get_reranker():
     global _reranker
     if _reranker is None:
-        device_target = "cuda" if torch.cuda.is_available() else "cpu"
-        _reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device=device_target)
+        _reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
     return _reranker
 
 

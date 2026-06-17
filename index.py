@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple
 
 import faiss
 import numpy as np
-from rank_bm25 import BM25Okapi
+from bm25 import SimpleBM25Okapi
 
 from chunk import Chunk, chunk_corpus
 from embed import embed_texts
@@ -71,13 +71,13 @@ def build_index(
             page_texts[chunk.page_id] = text
     sorted_pids = sorted(page_texts.keys())
     bm25_corpus = [page_texts[pid].lower().split() for pid in sorted_pids]
-    bm25 = BM25Okapi(bm25_corpus)
+    bm25 = SimpleBM25Okapi(bm25_corpus)
     with open(out_dir / "bm25.pkl", "wb") as f:
         pickle.dump((bm25, sorted_pids), f)
 
     # BM25 on titles only
     title_corpus = [records_map[pid].get("title", "").lower().split() for pid in sorted_pids]
-    bm25_title = BM25Okapi(title_corpus)
+    bm25_title = SimpleBM25Okapi(title_corpus)
     with open(out_dir / "bm25_title.pkl", "wb") as f:
         pickle.dump((bm25_title, sorted_pids), f)
 
